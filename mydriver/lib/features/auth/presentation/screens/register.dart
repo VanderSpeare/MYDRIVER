@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mydriver/routes/app_routes.dart';
 import 'package:provider/provider.dart';
-import 'package:mydriver/features/auth/logic/auth_controller.dart';
+import '../../logic/auth_controller.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -14,17 +14,15 @@ class _RegisterPageState extends State<RegisterPage> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _otpController = TextEditingController();
+  final _roleController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  bool _isOtpSent = false;
 
   @override
   void dispose() {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _otpController.dispose();
+    _roleController.dispose();
     super.dispose();
   }
 
@@ -37,7 +35,10 @@ class _RegisterPageState extends State<RegisterPage> {
           body: SafeArea(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 40.0,
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -132,68 +133,35 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Send OTP Button
-                      ElevatedButton(
-                        onPressed: _isOtpSent
-                            ? null
-                            : () async {
-                                if (_phoneController.text.isNotEmpty &&
-                                    _phoneController.text.length >= 10) {
-                                  bool otpSent = await authController.sendOtpForRegister(
-                                    _phoneController.text,
-                                  );
-                                  if (otpSent) {
-                                    setState(() {
-                                      _isOtpSent = true;
-                                    });
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('OTP sent to your phone number')),
-                                    );
-                                  }
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Please enter a valid phone number')),
-                                  );
-                                }
-                              },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          minimumSize: const Size(double.infinity, 50),
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
+                      // Role Dropdown
+                      DropdownButtonFormField<String>(
+                        value: _roleController.text.isEmpty ? null : _roleController.text,
+                        decoration: InputDecoration(
+                          labelText: 'Role',
+                          labelStyle: const TextStyle(color: Colors.black54),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.8),
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
                           ),
                         ),
-                        child: const Text(
-                          'Send OTP',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
+                        items: ['customer', 'driver', 'employee']
+                            .map((role) => DropdownMenuItem(
+                                  value: role,
+                                  child: Text(role),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          _roleController.text = value!;
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please select a role';
+                          }
+                          return null;
+                        },
                       ),
-                      const SizedBox(height: 20),
-
-                      // OTP Field
-                      if (_isOtpSent)
-                        TextFormField(
-                          controller: _otpController,
-                          decoration: InputDecoration(
-                            labelText: 'Enter OTP',
-                            labelStyle: const TextStyle(color: Colors.black54),
-                            filled: true,
-                            fillColor: Colors.white.withOpacity(0.8),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter the OTP';
-                            }
-                            return null;
-                          },
-                        ),
                       const SizedBox(height: 20),
 
                       // Error Message
@@ -210,22 +178,20 @@ class _RegisterPageState extends State<RegisterPage> {
                             ? null
                             : () async {
                                 if (_formKey.currentState!.validate()) {
-                                  if (!_isOtpSent) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Please send and verify OTP first')),
-                                    );
-                                    return;
-                                  }
-
                                   bool success = await authController.register(
                                     _phoneController.text,
                                     _passwordController.text,
-                                    'customer',
-                                    _otpController.text,
+                                    _roleController.text,
                                   );
-
                                   if (success) {
-                                    Navigator.pushNamed(context, AppRoutes.login);
+                                    // Navigate based on user role
+                                    if (authController.currentUser!.role == 'customer') {
+                                      Navigator.pushNamed(context, AppRoutes.booking);
+                                    } else if (authController.currentUser!.role == 'driver') {
+                                      Navigator.pushNamed(context, AppRoutes.orderList);
+                                    } else if (authController.currentUser!.role == 'employee') {
+                                      Navigator.pushNamed(context, AppRoutes.collaborator);
+                                    }
                                   }
                                 }
                               },
@@ -239,10 +205,15 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ),
                         child: authController.isLoading
-                            ? const CircularProgressIndicator(color: Colors.black)
+                            ? const CircularProgressIndicator(
+                                color: Colors.black,
+                              )
                             : const Text(
-                                'Register',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                'REGISTER',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                       ),
                       const SizedBox(height: 20),

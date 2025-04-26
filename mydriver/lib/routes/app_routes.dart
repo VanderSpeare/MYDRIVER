@@ -13,4 +13,5 @@ class AppRoutes {
   static const String contractList = '/contract_list';
   static const String employeeLogin = '/employee_login';
   static const String collaborator = '/collaborator';
+  
 }

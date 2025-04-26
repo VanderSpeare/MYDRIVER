@@ -9,6 +9,8 @@ import 'features/driver/logic/driver_controller.dart';
 import 'features/employee/logic/employee_controller.dart';
 import 'features/welcome/logic/welcome_controller.dart';
 import 'routes/app_routes.dart';
+import 'features/booking/presentation/screens/booking.dart';
+import 'features/collaborator/presentation/collaborator.dart';
 
 void main() {
   runApp(
@@ -38,6 +40,8 @@ class MyApp extends StatelessWidget {
         AppRoutes.welcome: (context) => const WelcomePage(),
         AppRoutes.login: (context) => const LoginPage(),
         AppRoutes.register: (context) => const RegisterPage(),
+        AppRoutes.booking: (context) => const BookingPage(),
+        AppRoutes.collaborator: (context) => const CollaboratorPage(),
         // Add other routes as needed
       },
     );

@@ -13,14 +13,14 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _otpController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
     _phoneController.dispose();
     _passwordController.dispose();
-    _otpController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -105,6 +105,31 @@ class _LoginPageState extends State<LoginPage> {
                           return null;
                         },
                       ),
+                      const SizedBox(height: 20),
+
+                      // Confirm Password Field
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          labelStyle: const TextStyle(color: Colors.black54),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please confirm your password';
+                          } else if (value != _passwordController.text) {
+                            return 'Passwords do not match';
+                          }
+                          return null;
+                        },
+                      ),
                       const SizedBox(height: 10),
 
                       // Forgot Password Link
@@ -129,30 +154,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 20),
 
-                      // OTP Field (shown after OTP is sent)
-                      if (authController.isOtpSentForLogin)
-                        TextFormField(
-                          controller: _otpController,
-                          decoration: InputDecoration(
-                            labelText: 'Enter OTP',
-                            labelStyle: const TextStyle(color: Colors.black54),
-                            filled: true,
-                            fillColor: Colors.white.withOpacity(0.8),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter the OTP';
-                            }
-                            return null;
-                          },
-                        ),
-                      const SizedBox(height: 20),
-
                       // Error Message
                       if (authController.errorMessage != null)
                         Text(
@@ -161,67 +162,42 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       const SizedBox(height: 20),
 
-                      // Log In Button (or Verify OTP Button)
+                      // Log In Button
                       ElevatedButton(
-                        onPressed:
-                            authController.isLoading
-                                ? null
-                                : () async {
-                                  if (_formKey.currentState!.validate()) {
-                                    if (!authController.isOtpSentForLogin) {
-                                      // Step 1: Send OTP
-                                      bool otpSent = await authController
-                                          .sendOtpForLogin(
-                                            _phoneController.text,
-                                          );
-                                      if (otpSent) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'OTP sent to your phone number',
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    } else {
-                                      // Step 2: Verify OTP and login
-                                      bool success = await authController
-                                          .verifyOtpForLogin(
-                                            _phoneController.text,
-                                            _passwordController.text,
-                                            _otpController.text,
-                                          );
-                                      if (success) {
-                                        // Navigate based on user role
-                                        if (authController.currentUser!.role ==
-                                            'customer') {
-                                          Navigator.pushNamed(
-                                            context,
-                                            AppRoutes.booking,
-                                          );
-                                        } else if (authController
-                                                .currentUser!
-                                                .role ==
-                                            'driver') {
-                                          Navigator.pushNamed(
-                                            context,
-                                            AppRoutes.orderList,
-                                          );
-                                        } else if (authController
-                                                .currentUser!
-                                                .role ==
-                                            'employee') {
-                                          Navigator.pushNamed(
-                                            context,
-                                            AppRoutes.collaborator,
-                                          );
-                                        }
-                                      }
+                        onPressed: authController.isLoading
+                            ? null
+                            : () async {
+                                if (_formKey.currentState!.validate()) {
+                                  // Direct login without OTP
+                                  bool success = await authController.login(
+                                    _phoneController.text,
+                                    _passwordController.text,
+                                    _confirmPasswordController.text,
+                                  );
+                                  if (success) {
+                                    // Navigate based on user role
+                                    if (authController.currentUser!.role ==
+                                        'customer') {
+                                      Navigator.pushNamed(
+                                        context,
+                                        AppRoutes.booking,
+                                      );
+                                    } else if (authController.currentUser!.role ==
+                                        'driver') {
+                                      Navigator.pushNamed(
+                                        context,
+                                        AppRoutes.orderList,
+                                      );
+                                    } else if (authController.currentUser!.role ==
+                                        'employee') {
+                                      Navigator.pushNamed(
+                                        context,
+                                        AppRoutes.collaborator,
+                                      );
                                     }
                                   }
-                                },
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           minimumSize: const Size(double.infinity, 50),
@@ -231,20 +207,17 @@ class _LoginPageState extends State<LoginPage> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child:
-                            authController.isLoading
-                                ? const CircularProgressIndicator(
-                                  color: Colors.black,
-                                )
-                                : Text(
-                                  authController.isOtpSentForLogin
-                                      ? 'VERIFY OTP'
-                                      : 'LOG IN',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                        child: authController.isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.black,
+                              )
+                            : const Text(
+                                'LOG IN',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
+                              ),
                       ),
                       const SizedBox(height: 20),
 
